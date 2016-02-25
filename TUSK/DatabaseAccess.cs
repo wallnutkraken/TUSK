@@ -78,9 +78,14 @@ namespace TUSK
                 Console.WriteLine($"Rows affected: {rows}");
                 Properties.Settings.Default.NextId++;
                 Properties.Settings.Default.Save();
-            } 
+            }
             catch (Exception e)
             {
+                if (e.Message.StartsWith("Violation of PRIMARY KEY"))
+                {
+                    Disconnect();
+                    return;
+                }
                 Fancy.Error(e.Message);
                 CallHome.SomethingBad(DateTime.UtcNow.ToString() + "|| " + e.Message);
             }

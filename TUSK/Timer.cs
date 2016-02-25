@@ -10,7 +10,7 @@ namespace TUSK
     {
         public static bool PostingTime()
         {
-            if (DateTime.UtcNow.Subtract(Properties.Settings.Default.LastPost).Minutes >= 10)
+            if (DateTime.UtcNow.Subtract(Properties.Settings.Default.LastPost).Minutes >= 30)
                 return true;
             return false;
         }

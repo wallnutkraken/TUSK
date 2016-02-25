@@ -3,21 +3,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Telegram.Bot;
 using System.Threading;
 using Markov;
-using Telegram.Bot.Types;
+using TelegramBotNet;
+using TelegramBotNet.DTOs;
 
 namespace TUSK
 {
     class Bot
     {
-        private Api Telegram;
+        private TelegramBotApi Telegram;
         private List<long> ChatIds;
         private MarkovChain<string> Chain;
         public Bot(string apiKey)
         {
-            Telegram = new Api(apiKey);
+            Telegram = new TelegramBotApi(apiKey);
         }
 
         private void Format(ref string str)
@@ -35,8 +35,25 @@ namespace TUSK
             {
                 string lin = line;
                 Format(ref lin);
-                Chain.Add(lin.Split(splitterChars, StringSplitOptions.RemoveEmptyEntries));
+                string[] words = lin.Split(splitterChars, StringSplitOptions.RemoveEmptyEntries);
+                List<string> goodWords = new List<string>();
+                foreach (string word in words)
+                {
+                    if (CheckForLink(word) == false)
+                    {
+                        goodWords.Add(word);
+                    }
+                }
+                Chain.Add(goodWords);
             }
+        }
+
+        private bool CheckForLink(string word)
+        {
+            Uri uriResult;
+            bool result = Uri.TryCreate(word, UriKind.Absolute, out uriResult)
+                && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
+            return result;
         }
 
         /// <summary>
@@ -45,11 +62,21 @@ namespace TUSK
         public void Init()
         {
             ChatIds = DatabaseAccess.GetActiveChats();
-            Chain = new MarkovChain<string>(2);
+            Chain = new MarkovChain<string>(1);
             List<string> messages = DatabaseAccess.GetAllMessages();
+            if (RunArgs.Dump == true)
+            {
+                System.IO.File.WriteAllLines("dbDump.log", messages);
+            }
             foreach (string str in messages)
             {
                 Feed(str);
+            }
+            if (RunArgs.Post == true)
+            {
+                SendOutMessages();
+                Console.WriteLine("Done. Exiting.");
+                Environment.Exit(0);
             }
         }
 
@@ -68,9 +95,16 @@ namespace TUSK
         /// <summary>
         /// Posts a message to a chat
         /// </summary>
-        internal async void PostMessage(string message, long chatId)
+        internal void PostMessage(string message, long chatId)
         {
-            await Telegram.SendTextMessage(chatId, message);
+            try
+            {
+                Telegram.SendMessage(chatId.ToString(), message);
+            }
+            catch (Exception)
+            {
+                RemoveChat(chatId);
+            }
         }
 
         public void SendOutMessages()
@@ -82,6 +116,11 @@ namespace TUSK
             }
         }
 
+        private void RemoveChat(long chatid)
+        {
+            ChatIds.Remove(chatid);
+            DatabaseAccess.DeactivateChat(chatid);
+        }
         public void UnsubChat(long chatid)
         {
             if (ChatIds.Contains(chatid) == false)
@@ -89,8 +128,7 @@ namespace TUSK
                 PostMessage("WhatEVER dude you weren't in my life ANYWAY fucking cuck", chatid);
                 return;
             }
-            ChatIds.Remove(chatid);
-            DatabaseAccess.DeactivateChat(chatid);
+            RemoveChat(chatid);
             PostMessage(Responses.UnSub(), chatid);
         }
 
@@ -105,33 +143,17 @@ namespace TUSK
             DatabaseAccess.AddChat(chatid);
             PostMessage(Responses.Sub(), chatid);
         }
-        private Update[] updateArray;
-        private async void GetUpdates()
+        private Update[] GetUpdates()
         {
-            try
-            {
-                updateArray = await Telegram.GetUpdates(Properties.Settings.Default.LastReadMessage);
-            }
-            catch (Exception e)
-            {
-                updateArray = null;
-            }
+            return Telegram.GetUpdates(Properties.Settings.Default.LastReadMessage.ToString()).ToArray();
         }
 
         private void Update()
         {
-            GetUpdates();
-            while (updateArray == null)
+            Update[] updates = GetUpdates();
+            foreach (Update update in updates)
             {
-                /* WOO I HAVE TO FUCKIGHJBN WAIT BECAUSE FUCK THREADS AAAAAAAAAAAAA */
-            }
-            if (updateArray == null)
-            {
-                return;
-            }
-            foreach (Update update in updateArray)
-            {
-                if (update.Type == UpdateType.MessageUpdate && update.Message.Text != null)
+                if (update.Message.Text != null)
                 {
                     if (update.Message.Text.StartsWith("/tellmestuff"))
                     {
@@ -151,22 +173,25 @@ namespace TUSK
                         }
                     }
                 }
-                Properties.Settings.Default.LastReadMessage = update.Id + 1;
+                Properties.Settings.Default.LastReadMessage = update.UpdateId + 1;
                 Properties.Settings.Default.Save();
             }
-            updateArray = null;
         }
 
         public void Run()
         {
+            ConsoleHelper.WriteLineIf(RunArgs.Verbose, "done.");
             while (true)
             {
                 Update();
                 Thread.Sleep(5000);
                 if (Timer.PostingTime())
                 {
+                    ConsoleHelper.WriteIf(RunArgs.Verbose, "Begin post... ");
                     SendOutMessages();
                     Properties.Settings.Default.LastPost = DateTime.UtcNow;
+                    Properties.Settings.Default.Save();
+                    ConsoleHelper.WriteLineIf(RunArgs.Verbose, "done.");
                 }
             }
         }
