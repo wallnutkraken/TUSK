@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Threading;
 using Markov;
 using TelegramBotNet;
 using TelegramBotNet.DTOs;
@@ -55,7 +54,8 @@ namespace TUSK
             Uri uriResult;
             bool result = Uri.TryCreate(word, UriKind.Absolute, out uriResult)
                 && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
-            return result;
+            bool alternate = word.StartsWith("?v=");
+            return result || alternate;
         }
 
         /// <summary>
@@ -83,7 +83,7 @@ namespace TUSK
             }
         }
 
-        private string Generate()
+        internal string Generate()
         {
             List<string> chainWords = _chain.Chain().ToList();
 
@@ -105,9 +105,24 @@ namespace TUSK
             }
         }
 
-        public void SendOutMessages()
+        /// <summary>
+        /// Vanilla sendout, generated.
+        /// </summary>
+        internal void SendOutMessages()
         {
             string chain = Generate();
+            SendOutMessages(chain);
+        }
+
+        /// <summary>
+        /// Override sendout, used for thinking
+        /// </summary>
+        /// <param name="overrideMsg">Message to send</param>
+        internal void SendOutMessages(string overrideMsg)
+        {
+            ConsoleHelper.WriteLineIf(RunArgs.Verbose, "Generating chain...");
+            string chain = overrideMsg;
+            ConsoleHelper.WriteLineIf(RunArgs.Verbose, $"Generated chain: {chain}", ConsoleColor.DarkGreen);
             foreach (long id in _chatIds)
             {
                 PostMessage(chain, id);
@@ -153,14 +168,19 @@ namespace TUSK
             {
                 if (update.Message.Text != null)
                 {
-                    if (update.Message.Text.StartsWith("/tellmestuff"))
+                    ConsoleHelper.WriteLineIf(RunArgs.Verbose, $"[{update.Message.From.Id}]{update.Message.From.FirstName}: {update.Message.Text}");
+                    if (update.Message.Text.StartsWith("/subscribe"))
                     {
                         SubChat(update.Message.Chat.Id);
                     }
-                    else if (update.Message.Text.StartsWith("/endyourlife"))
+                    else if (update.Message.Text.StartsWith("/unsubscribe"))
                     {
                         UnsubChat(update.Message.Chat.Id);
                     }
+                    //else if (update.Message.Text.Contains("pant"))
+                    //{
+                    //    SendOutMessages();
+                    //}
                     else
                     {
                         Feed(update.Message.Text);
@@ -174,16 +194,23 @@ namespace TUSK
                 Properties.Settings.Default.LastReadMessage = update.UpdateId + 1;
                 Properties.Settings.Default.Save();
             }
+            if (updates.Length > 0 && Precentage.CheckChance(5))
+            {
+                SendOutMessages();
+            }
         }
 
         [SuppressMessage("ReSharper", "FunctionNeverReturns")]
         public void Run()
         {
             ConsoleHelper.WriteLineIf(RunArgs.Verbose, "done.");
+            ControlThread control = new ControlThread();
+            control.Start();
             while (true)
             {
                 Update();
-                Thread.Sleep(5000);
+                //Thread.Sleep(500);
+                Timer.DumpTime();
                 if (Timer.PostingTime())
                 {
                     ConsoleHelper.WriteIf(RunArgs.Verbose, "Begin post... ");

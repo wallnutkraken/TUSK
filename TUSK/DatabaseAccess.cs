@@ -9,15 +9,18 @@ namespace TUSK
     internal static class DatabaseAccess
     {
         private static SqlConnection db;
+        private static bool _usingDb = false;
+        public static bool UsingDb => _usingDb;
 
-        private static void DumpDbToFile()
+        public static void DumpDbToFile()
         {
-            Connect();
+            ConsoleHelper.WriteIf(RunArgs.Verbose, "Beginning timely database dump...");
             System.IO.File.WriteAllLines($"dbDump-{DateTime.Now.ToShortDateString()}-{DateTime.Now.Hour}.{DateTime.Now.Minute}.log", FormatHelpers.CollectionToString(GetAllMessages()));
-            Disconnect();
+            ConsoleHelper.WriteLineIf(RunArgs.Verbose, "done.");
         }
         private static void Connect()
         {
+            _usingDb = true;
             db = new SqlConnection(Properties.Settings.Default.DataConnectionString);
             db.Open();
         }
@@ -26,6 +29,7 @@ namespace TUSK
         {
             db.Close();
             db = null;
+            _usingDb = false;
         }
 
         internal static List<long> GetActiveChats()
@@ -33,21 +37,23 @@ namespace TUSK
             List<long> chatIds = new List<long>();
 
             Connect();
-            SqlCommand cmd = db.CreateCommand();
-            cmd.CommandText = "SELECT * FROM Chats";
-            try
+            using (SqlCommand cmd = db.CreateCommand())
             {
-                SqlDataReader reader = cmd.ExecuteReader();
-
-                while (reader.Read())
+                cmd.CommandText = "SELECT * FROM Chats";
+                try
                 {
-                    chatIds.Add(long.Parse(reader["ChatID"].ToString()));
+                    SqlDataReader reader = cmd.ExecuteReader();
+
+                    while (reader.Read())
+                    {
+                        chatIds.Add(long.Parse(reader["ChatID"].ToString()));
+                    }
                 }
-            }
-            catch (Exception e)
-            {
-                FormatHelpers.Error(e.Message);
-                CallHome.SomethingBad($"{DateTime.UtcNow.ToString()} || {e.Message}");
+                catch (Exception e)
+                {
+                    FormatHelpers.Error(e.Message);
+                    CallHome.SomethingBad($"{DateTime.UtcNow.ToString()} || {e.Message}");
+                }
             }
             Disconnect();
 
@@ -57,16 +63,18 @@ namespace TUSK
         internal static void AddChat(long chatId)
         {
             Connect();
-            SqlCommand cmd = db.CreateCommand();
-            cmd.CommandText = $"INSERT INTO Chats VALUES ({chatId})";
-            try
+            using (SqlCommand cmd = db.CreateCommand())
             {
-                cmd.ExecuteNonQuery();
-            }
-            catch (Exception e)
-            {
-                FormatHelpers.Error(e.Message);
-                CallHome.SomethingBad($"{DateTime.UtcNow.ToString()} || {e.Message}");
+                cmd.CommandText = $"INSERT INTO Chats VALUES ({chatId})";
+                try
+                {
+                    cmd.ExecuteNonQuery();
+                }
+                catch (Exception e)
+                {
+                    FormatHelpers.Error(e.Message);
+                    CallHome.SomethingBad($"{DateTime.UtcNow.ToString()} || {e.Message}");
+                }
             }
             Disconnect();
         }
@@ -76,29 +84,51 @@ namespace TUSK
             AddMessage(message.Id, message.Text);
         }
 
+        internal static int CountMessages()
+        {
+            Connect();
+            int val;
+            using (SqlCommand cmd = db.CreateCommand())
+            {
+                cmd.CommandText = "SELECT COUNT(*) FROM Messages";
+                val = 0;
+                try
+                {
+                    val = (int)cmd.ExecuteScalar();
+                }
+                catch (Exception e)
+                {
+                    FormatHelpers.Error(e.Message);
+                }
+            }
+            Disconnect();
+            return val;
+        }
+
         internal static void AddMessage(long chatId, string text)
         {
             Connect();
-            SqlCommand cmd = db.CreateCommand();
-            cmd.CommandText = $"INSERT INTO Messages (Id, Text) VALUES ({Properties.Settings.Default.NextId}, @message)";
-            cmd.Parameters.Add("@message", System.Data.SqlDbType.NVarChar);
-            cmd.Parameters["@message"].Value = text;
-            try
+            using (SqlCommand cmd = db.CreateCommand())
             {
-                int rows = cmd.ExecuteNonQuery();
-                Console.WriteLine($"Rows affected: {rows}");
-                Properties.Settings.Default.NextId++;
-                Properties.Settings.Default.Save();
-            }
-            catch (Exception e)
-            {
-                if (e.Message.StartsWith("Violation of PRIMARY KEY"))
+                cmd.CommandText = $"INSERT INTO Messages (Id, Text) VALUES ({Properties.Settings.Default.NextId}, @message)";
+                cmd.Parameters.Add("@message", System.Data.SqlDbType.NVarChar);
+                cmd.Parameters["@message"].Value = text;
+                try
                 {
-                    Disconnect();
-                    return;
+                    int rows = cmd.ExecuteNonQuery();
+                    Properties.Settings.Default.NextId++;
+                    Properties.Settings.Default.Save();
                 }
-                FormatHelpers.Error(e.Message);
-                CallHome.SomethingBad($"{DateTime.UtcNow.ToString()} || {e.Message}");
+                catch (Exception e)
+                {
+                    if (e.Message.StartsWith("Violation of PRIMARY KEY"))
+                    {
+                        Disconnect();
+                        return;
+                    }
+                    FormatHelpers.Error(e.Message);
+                    CallHome.SomethingBad($"{DateTime.UtcNow.ToString()} || {e.Message}");
+                }
             }
             Disconnect();
         }
