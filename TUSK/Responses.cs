@@ -40,7 +40,7 @@ namespace TUSK
         {
             Random rng = new Random();
             string[] pool;
-            if (rng.Next(0, 100) > 98)
+            if (Precentage.CheckChance(98))
             {
                 pool = Rare;
             }
@@ -63,7 +63,7 @@ namespace TUSK
         {
             Random rng = new Random();
             string[] pool;
-            if (rng.Next(0, 100) > 98)
+            if (Precentage.CheckChance(98))
             {
                 pool = Rare;
             }
