@@ -25,7 +25,7 @@ namespace TUSK.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("190435836:AAEn2DU_QtVEJoFSw8d_NcAENoFjxGUhpqo")]
+        [global::System.Configuration.DefaultSettingValueAttribute("164775419:AAH4ZDtqG_vTmMQIs0-lVxVlF1S8aTIz0yM")]
         public string APIKey {
             get {
                 return ((string)(this["APIKey"]));

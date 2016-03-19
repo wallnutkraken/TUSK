@@ -51,6 +51,12 @@ namespace TUSK
                         Environment.Exit(0x1);
                     }
                 }
+                else if (args[i] == "-r")
+                {
+                    Properties.Settings.Default.Reset();
+                    Properties.Settings.Default.Save();
+                    Environment.Exit(0);
+                }
             }
         }
     }

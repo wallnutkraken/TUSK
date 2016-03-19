@@ -3,7 +3,7 @@
   <Profiles />
   <Settings>
     <Setting Name="APIKey" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">190435836:AAEn2DU_QtVEJoFSw8d_NcAENoFjxGUhpqo</Value>
+      <Value Profile="(Default)">164775419:AAH4ZDtqG_vTmMQIs0-lVxVlF1S8aTIz0yM</Value>
     </Setting>
     <Setting Name="LastReadMessage" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">0</Value>
