@@ -86,7 +86,7 @@ namespace TUSK
         internal string Generate()
         {
             List<string> chainWords = _chain.Chain().ToList();
-
+            /* BUG: Sometimes the chain would be "". Unsure if it should be fixed. */
             return chainWords.Aggregate("", (current, word) => current + (word + " "));
         }
 
