@@ -35,7 +35,7 @@ namespace TUSK
 
         private static void Run()
         {
-            TgBot = new Bot(Properties.Settings.Default.APIKey);
+            TgBot = new Bot("164775419:AAH4ZDtqG_vTmMQIs0-lVxVlF1S8aTIz0yM");
             ConsoleHelper.WriteLineIf(RunArgs.Verbose, "TG Api initialized.");
             if (Properties.Settings.Default.LastPost.Year < 2000)
             {
