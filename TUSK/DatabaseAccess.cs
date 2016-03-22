@@ -15,7 +15,8 @@ namespace TUSK
         public static void DumpDbToFile()
         {
             ConsoleHelper.WriteIf(RunArgs.Verbose, "Beginning timely database dump...");
-            System.IO.File.WriteAllLines($"dbDump-{DateTime.Now.ToShortDateString()}-{DateTime.Now.Hour}.{DateTime.Now.Minute}.log", FormatHelpers.CollectionToString(GetAllMessages()));
+            string filename = $"dbDump-{DateTime.Now.Year}-{DateTime.Now.Month}-{DateTime.Now.Day}-{DateTime.Now.Hour}.{DateTime.Now.Minute}.log";
+            System.IO.File.WriteAllLines(filename, FormatHelpers.CollectionToString(GetAllMessages()));
             ConsoleHelper.WriteLineIf(RunArgs.Verbose, "done.");
         }
         private static void Connect()
