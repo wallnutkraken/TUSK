@@ -8,7 +8,7 @@ namespace TUSK
 {
     internal static class DatabaseAccess
     {
-        private static SqlConnection db;
+        private static SqlConnection _db;
         private static bool _usingDb = false;
         public static bool UsingDb => _usingDb;
 
@@ -21,14 +21,14 @@ namespace TUSK
         private static void Connect()
         {
             _usingDb = true;
-            db = new SqlConnection(Properties.Settings.Default.DataConnectionString);
-            db.Open();
+            _db = new SqlConnection(Properties.Settings.Default.DataConnectionString);
+            _db.Open();
         }
 
         private static void Disconnect()
         {
-            db.Close();
-            db = null;
+            _db.Close();
+            _db = null;
             _usingDb = false;
         }
 
@@ -37,7 +37,7 @@ namespace TUSK
             List<long> chatIds = new List<long>();
 
             Connect();
-            using (SqlCommand cmd = db.CreateCommand())
+            using (SqlCommand cmd = _db.CreateCommand())
             {
                 cmd.CommandText = "SELECT * FROM Chats";
                 try
@@ -63,7 +63,7 @@ namespace TUSK
         internal static void AddChat(long chatId)
         {
             Connect();
-            using (SqlCommand cmd = db.CreateCommand())
+            using (SqlCommand cmd = _db.CreateCommand())
             {
                 cmd.CommandText = $"INSERT INTO Chats VALUES ({chatId})";
                 try
@@ -88,7 +88,7 @@ namespace TUSK
         {
             Connect();
             int val;
-            using (SqlCommand cmd = db.CreateCommand())
+            using (SqlCommand cmd = _db.CreateCommand())
             {
                 cmd.CommandText = "SELECT COUNT(*) FROM Messages";
                 val = 0;
@@ -108,7 +108,7 @@ namespace TUSK
         internal static void AddMessage(long chatId, string text)
         {
             Connect();
-            using (SqlCommand cmd = db.CreateCommand())
+            using (SqlCommand cmd = _db.CreateCommand())
             {
                 cmd.CommandText = $"INSERT INTO Messages (Id, Text) VALUES ({Properties.Settings.Default.NextId}, @message)";
                 cmd.Parameters.Add("@message", System.Data.SqlDbType.NVarChar);
@@ -164,7 +164,7 @@ namespace TUSK
         public static List<ITelegramDbEntry> GetAllMessages()
         {
             Connect();
-            SqlCommand cmd = db.CreateCommand();
+            SqlCommand cmd = _db.CreateCommand();
             cmd.CommandText = "SELECT Text, Id FROM Messages";
             List<TelegramDbEntry> messages = new List<TelegramDbEntry>();
 
@@ -189,7 +189,7 @@ namespace TUSK
         public static void DeactivateChat(long chatId)
         {
             Connect();
-            SqlCommand cmd = db.CreateCommand();
+            SqlCommand cmd = _db.CreateCommand();
             cmd.CommandText = $"DELETE FROM Chats WHERE ChatId = {chatId}";
             try
             {
