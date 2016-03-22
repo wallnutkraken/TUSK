@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Data.SqlClient;
+using Mono.Data.Sqlite;
 using System.IO;
 
 namespace TUSK
 {
     internal static class DatabaseAccess
     {
-        private static SqlConnection _db;
+        private static SqliteConnection _db;
         private static bool _usingDb = false;
         public static bool UsingDb => _usingDb;
 
@@ -21,7 +21,7 @@ namespace TUSK
         private static void Connect()
         {
             _usingDb = true;
-            _db = new SqlConnection(Properties.Settings.Default.DataConnectionString);
+            _db = new SqliteConnection("Data Source=data.sqlite;Version=3;");
             _db.Open();
         }
 
@@ -32,17 +32,31 @@ namespace TUSK
             _usingDb = false;
         }
 
+        internal static void CreateTable()
+        {
+            Connect();
+            SqliteCommand cmd = _db.CreateCommand();
+            cmd.CommandText = "CREATE TABLE Messages (Text TEXT, Id int)";
+            cmd.ExecuteNonQuery();
+
+            cmd = _db.CreateCommand();
+            cmd.CommandText = "CREATE TABLE Chats (ChatID int)";
+            cmd.ExecuteNonQuery();
+
+            Disconnect();
+        }
+
         internal static List<long> GetActiveChats()
         {
             List<long> chatIds = new List<long>();
 
             Connect();
-            using (SqlCommand cmd = _db.CreateCommand())
+            using (SqliteCommand cmd = _db.CreateCommand())
             {
                 cmd.CommandText = "SELECT * FROM Chats";
                 try
                 {
-                    SqlDataReader reader = cmd.ExecuteReader();
+                    SqliteDataReader reader = cmd.ExecuteReader();
 
                     while (reader.Read())
                     {
@@ -63,7 +77,7 @@ namespace TUSK
         internal static void AddChat(long chatId)
         {
             Connect();
-            using (SqlCommand cmd = _db.CreateCommand())
+            using (SqliteCommand cmd = _db.CreateCommand())
             {
                 cmd.CommandText = $"INSERT INTO Chats VALUES ({chatId})";
                 try
@@ -88,7 +102,7 @@ namespace TUSK
         {
             Connect();
             int val;
-            using (SqlCommand cmd = _db.CreateCommand())
+            using (SqliteCommand cmd = _db.CreateCommand())
             {
                 cmd.CommandText = "SELECT COUNT(*) FROM Messages";
                 val = 0;
@@ -105,14 +119,14 @@ namespace TUSK
             return val;
         }
 
-        internal static void AddMessage(long chatId, string text)
+        internal static void AddMessage(long chatId, string textValue)
         {
             Connect();
-            using (SqlCommand cmd = _db.CreateCommand())
+            using (SqliteCommand cmd = _db.CreateCommand())
             {
                 cmd.CommandText = $"INSERT INTO Messages (Id, Text) VALUES ({Properties.Settings.Default.NextId}, @message)";
-                cmd.Parameters.Add("@message", System.Data.SqlDbType.NVarChar);
-                cmd.Parameters["@message"].Value = text;
+                cmd.Parameters.Add("@message", System.Data.DbType.String);
+                cmd.Parameters["@message"].Value = textValue;
                 try
                 {
                     int rows = cmd.ExecuteNonQuery();
@@ -166,13 +180,13 @@ namespace TUSK
         public static List<ITelegramDbEntry> GetAllMessages()
         {
             Connect();
-            SqlCommand cmd = _db.CreateCommand();
+            SqliteCommand cmd = _db.CreateCommand();
             cmd.CommandText = "SELECT Text, Id FROM Messages";
             List<TelegramDbEntry> messages = new List<TelegramDbEntry>();
 
             try
             {
-                SqlDataReader reader = cmd.ExecuteReader();
+                SqliteDataReader reader = cmd.ExecuteReader();
                 while (reader.Read())
                 {
                     messages.Add(new TelegramDbEntry(uint.Parse(reader["Id"].ToString()), reader["Text"].ToString()));
@@ -191,7 +205,7 @@ namespace TUSK
         public static void DeactivateChat(long chatId)
         {
             Connect();
-            SqlCommand cmd = _db.CreateCommand();
+            SqliteCommand cmd = _db.CreateCommand();
             cmd.CommandText = $"DELETE FROM Chats WHERE ChatId = {chatId}";
             try
             {

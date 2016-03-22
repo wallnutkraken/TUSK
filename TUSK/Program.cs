@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Threading;
+using System.IO;
+using Mono.Data.Sqlite;
 
 namespace TUSK
 {
@@ -8,6 +10,11 @@ namespace TUSK
         public static Bot TgBot;
         static void Main(string[] args)
         {
+            if (File.Exists("data.sqlite") == false)
+            {
+                Mono.Data.Sqlite.SqliteConnection.CreateFile("data.sqlite");
+                DatabaseAccess.CreateTable();
+            }
             RunArgs.Handle(args);
             while (true)
             {
