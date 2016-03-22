@@ -158,6 +158,8 @@ namespace TUSK
                     FormatHelpers.Error($"{e.Message} WHEN LOADING MESSAGES FROM LOG");
                 }
             }
+            Console.WriteLine("COMPLETED.");
+            Environment.Exit(0x0);
         }
 
 
