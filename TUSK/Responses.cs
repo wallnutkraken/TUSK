@@ -39,15 +39,7 @@ namespace TUSK
         public static string Sub()
         {
             Random rng = new Random();
-            string[] pool;
-            if (Precentage.CheckChance(98))
-            {
-                pool = Rare;
-            }
-            else
-            {
-                pool = Subscription;
-            }
+            string[] pool = Precentage.CheckChance(98) ? Rare : Subscription;
             bool uppercase = rng.NextDouble() >= 0.5;
             if (uppercase)
             {
