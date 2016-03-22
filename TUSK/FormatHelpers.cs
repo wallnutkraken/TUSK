@@ -23,13 +23,7 @@ namespace TUSK
 
         public static IEnumerable<string> CollectionToString<T>(IEnumerable<T> collection)
         {
-            List<string> toStrs = new List<string>();
-            foreach (object element in collection)
-            {
-                toStrs.Add(element.ToString());
-            }
-
-            return toStrs;
+            return (from object element in collection select element.ToString()).ToList();
         }
     }
 }
