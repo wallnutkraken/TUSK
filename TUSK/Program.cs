@@ -25,8 +25,10 @@ namespace TUSK
                 catch (Exception e)
                 {
                     FormatHelpers.Error(e.Message);
+                    FormatHelpers.Error(e.StackTrace);
                     ConsoleHelper.WriteLineIf(RunArgs.Verbose,
                         "An unhandled error has occured. Waiting 60 seconds to restart...");
+                    
                     Thread.Sleep(60*1000);
                 }
             }
@@ -35,13 +37,13 @@ namespace TUSK
 
         private static void Run()
         {
+            ConsoleHelper.WriteLineIf(RunArgs.Debug, $"Last Post: {Properties.Settings.Default.LastPost}", ConsoleColor.Gray);
             TgBot = new Bot("164775419:AAH4ZDtqG_vTmMQIs0-lVxVlF1S8aTIz0yM");
             ConsoleHelper.WriteLineIf(RunArgs.Verbose, "TG Api initialized.");
             if (Properties.Settings.Default.LastPost.Year < 2000)
             {
                 ConsoleHelper.WriteLineIf(RunArgs.Verbose, "Last post date is default. Setting to right now.");
-                Properties.Settings.Default.LastPost = DateTime.UtcNow;
-                Properties.Settings.Default.Save();
+                Globals.LastPost = DateTime.UtcNow;
             }
             ConsoleHelper.WriteIf(RunArgs.Verbose, "Beginning initialization... ");
             TgBot.Init();

@@ -64,7 +64,7 @@ namespace TUSK
         public void Init()
         {
             _chatIds = DatabaseAccess.GetActiveChats();
-            _chain = new MarkovChain<string>(1);
+            _chain = new MarkovChain<string>(2);
             List<ITelegramDbEntry> messages = DatabaseAccess.GetAllMessages();
             List<string> messagesStr = FormatHelpers.CollectionToString(messages).ToList();
             if (RunArgs.Dump)
@@ -158,7 +158,7 @@ namespace TUSK
         }
         private Update[] GetUpdates()
         {
-            return _telegram.GetUpdates(Properties.Settings.Default.LastReadMessage.ToString()).ToArray();
+            return _telegram.GetUpdates(Globals.Offset.ToString()).ToArray();
         }
 
         private void Update()
@@ -177,10 +177,6 @@ namespace TUSK
                     {
                         UnsubChat(update.Message.Chat.Id);
                     }
-                    //else if (update.Message.Text.Contains("pant"))
-                    //{
-                    //    SendOutMessages();
-                    //}
                     else
                     {
                         Feed(update.Message.Text);
@@ -191,8 +187,7 @@ namespace TUSK
                         }
                     }
                 }
-                Properties.Settings.Default.LastReadMessage = update.UpdateId + 1;
-                Properties.Settings.Default.Save();
+                Globals.Offset = update.UpdateId + 1;
             }
             if (updates.Length > 0 && Precentage.CheckChance(5))
             {
@@ -211,12 +206,13 @@ namespace TUSK
                 Update();
                 //Thread.Sleep(500);
                 Timer.DumpTime();
+                Globals.RunDebug();
                 if (Timer.PostingTime())
                 {
                     ConsoleHelper.WriteIf(RunArgs.Verbose, "Begin post... ");
                     SendOutMessages();
-                    Properties.Settings.Default.LastPost = DateTime.UtcNow;
-                    Properties.Settings.Default.Save();
+                    Globals.RunDebug();
+                    Globals.LastPost = DateTime.UtcNow;
                     ConsoleHelper.WriteLineIf(RunArgs.Verbose, "done.");
                 }
             }

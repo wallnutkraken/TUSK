@@ -120,6 +120,7 @@
     <Compile Include="RunArgs.cs" />
     <Compile Include="TelegramDbEntry.cs" />
     <Compile Include="Timer.cs" />
+    <Compile Include="Globals.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

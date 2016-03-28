@@ -7,6 +7,7 @@ namespace TUSK
         public static bool Dump { get; private set; }
         public static bool Post { get; private set; }
         public static bool Verbose { get; private set; }
+        public static bool Debug { get; private set; }
         public static void Handle(string[] args)
         {
             for (int i = 0; i < args.Length; i++)
@@ -14,6 +15,11 @@ namespace TUSK
                 if (args[i] == "--dump")
                 {
                     Dump = true;
+                }
+                if (args[i] == "-d" || args[i] == "--debug")
+                {
+                    Debug = true;
+                    Globals.RunDebug();
                 }
                 else if (args[i] == "--post")
                 {
@@ -55,5 +61,6 @@ namespace TUSK
                 }
             }
         }
+
     }
 }

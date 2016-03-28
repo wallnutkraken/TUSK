@@ -101,15 +101,20 @@ namespace TUSK
 
         internal static int CountMessages()
         {
+            return CountMessages("Messages");
+        }
+
+        internal static int CountMessages(string tablename)
+        {
             Connect();
-            int val;
+            long val;
             using (SqliteCommand cmd = _db.CreateCommand())
             {
-                cmd.CommandText = "SELECT COUNT(*) FROM Messages";
+                cmd.CommandText = $"SELECT count(*) FROM {tablename}";
                 val = 0;
                 try
                 {
-                    val = (int)cmd.ExecuteScalar();
+                    val = (long)cmd.ExecuteScalar();
                 }
                 catch (Exception e)
                 {
@@ -117,7 +122,7 @@ namespace TUSK
                 }
             }
             Disconnect();
-            return val;
+            return Convert.ToInt32(val);
         }
 
         internal static void AddMessage(long chatId, string textValue)
@@ -125,7 +130,7 @@ namespace TUSK
             Connect();
             using (SqliteCommand cmd = _db.CreateCommand())
             {
-                cmd.CommandText = $"INSERT INTO Messages (Id, Text) VALUES ({Properties.Settings.Default.NextId}, @message)";
+                cmd.CommandText = $"INSERT INTO Messages (Id, Text) VALUES ({Globals.NextId}, @message)";
                 cmd.Parameters.Add("@message", System.Data.DbType.String);
                 cmd.Parameters["@message"].Value = textValue;
                 try
@@ -142,6 +147,7 @@ namespace TUSK
                         return;
                     }
                     FormatHelpers.Error(e.Message);
+                    FormatHelpers.Error(e.StackTrace);
                     CallHome.SomethingBad($"{DateTime.UtcNow.ToString()} || {e.Message}");
                 }
             }
