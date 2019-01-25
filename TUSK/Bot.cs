@@ -3,20 +3,20 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Markov;
-using TelegramBotNet;
-using TelegramBotNet.DTOs;
+using Telegram.Bot;
+using Telegram.Bot.Types;
 
 namespace TUSK
 {
     class Bot
     {
         [SuppressMessage("ReSharper", "FieldCanBeMadeReadOnly.Local")]
-        private TelegramBotApi _telegram;
+        private TelegramBotClient _telegram;
         private List<long> _chatIds;
         private MarkovChain<string> _chain;
         public Bot(string apiKey)
         {
-            _telegram = new TelegramBotApi(apiKey);
+           _telegram = new TelegramBotClient(apiKey);
         }
 
         private void Format(ref string str)
@@ -64,7 +64,7 @@ namespace TUSK
         public void Init()
         {
             _chatIds = DatabaseAccess.GetActiveChats();
-            _chain = new MarkovChain<string>(1);
+            _chain = new MarkovChain<string>(2);
             List<ITelegramDbEntry> messages = DatabaseAccess.GetAllMessages();
             List<string> messagesStr = FormatHelpers.CollectionToString(messages).ToList();
             if (RunArgs.Dump)
@@ -87,7 +87,12 @@ namespace TUSK
         {
             List<string> chainWords = _chain.Chain().ToList();
             /* BUG: Sometimes the chain would be "". Unsure if it should be fixed. */
-            return chainWords.Aggregate("", (current, word) => current + (word + " "));
+            var chain = chainWords.Aggregate("", (current, word) => current + (word + " "));
+            if (chain == "")
+            {
+                return Generate(); // C# feels so yucky after writing Go for so long
+            }
+            return chain;
         }
 
         /// <summary>
@@ -97,7 +102,8 @@ namespace TUSK
         {
             try
             {
-                _telegram.SendMessage(chatId.ToString(), message);
+                var chat = new ChatId(chatId);
+                var messageTask = _telegram.SendTextMessageAsync(chat, message);
             }
             catch (Exception)
             {
@@ -158,7 +164,9 @@ namespace TUSK
         }
         private Update[] GetUpdates()
         {
-            return _telegram.GetUpdates(Properties.Settings.Default.LastReadMessage.ToString()).ToArray();
+            var updateTask = _telegram.GetUpdatesAsync(Properties.Settings.Default.LastReadMessage);
+            updateTask.Wait();
+            return updateTask.Result;
         }
 
         private void Update()
@@ -177,10 +185,10 @@ namespace TUSK
                     {
                         UnsubChat(update.Message.Chat.Id);
                     }
-                    //else if (update.Message.Text.Contains("pant"))
-                    //{
-                    //    SendOutMessages();
-                    //}
+                    else if (update.Message.Text.Contains("crab"))
+                    {
+                        SendOutMessages();
+                    }
                     else
                     {
                         Feed(update.Message.Text);
@@ -191,7 +199,7 @@ namespace TUSK
                         }
                     }
                 }
-                Properties.Settings.Default.LastReadMessage = update.UpdateId + 1;
+                Properties.Settings.Default.LastReadMessage = update.Id + 1;
                 Properties.Settings.Default.Save();
             }
             if (updates.Length > 0 && Precentage.CheckChance(5))
